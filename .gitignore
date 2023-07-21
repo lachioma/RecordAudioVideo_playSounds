@@ -1,0 +1,22 @@
+# Github gitignore repository:
+# https://github.com/github/gitignore/blob/master/Global/MATLAB.gitignore
+#
+# Useful page for how to set gitignore:
+# https://www.pluralsight.com/guides/how-to-use-gitignore-file
+
+
+# Windows default autosave extension
+*.asv
+
+# OSX / *nix default autosave extension
+*.m~
+
+# Data files
+/data
+*.avi
+*.mp4
+*.mic
+*.wav
+*.wave
+
+# Additional .gitignore files might be in specific folders.
