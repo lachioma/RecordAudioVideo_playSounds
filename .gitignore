@@ -13,10 +13,10 @@
 
 # Data files
 /data
-*.avi
-*.mp4
-*.mic
-*.wav
-*.wave
+#*.avi
+#*.mp4
+#*.mic
+#*.wav
+#*.wave
 
 # Additional .gitignore files might be in specific folders.
