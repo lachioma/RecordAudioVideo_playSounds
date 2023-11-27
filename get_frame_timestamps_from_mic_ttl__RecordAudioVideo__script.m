@@ -1,20 +1,34 @@
 
-%% Select and load microphone file
+%% Select and load audio file with FLIR camera TTL
 
 clear
 
-folder_root = 'Y:\Users\ariadna\behavior_PP\ac7\ac7_sounds\2023-09-14';
+folder_root = 'Y:\Users\ariadna\behavior_PP\25679\25679_3_sounds\2023-11-24';
 
-ls_mic = dir([folder_root filesep '*_TTLcam.wav']);
+fmt = '.wav';
+fmt = '.flac';
+% fmt = '.ttlcam'; % binary file
+
+ls_mic = dir([folder_root filesep '*_TTLcam' fmt]);
 if length(ls_mic) == 1
     path_mic = ls_mic(1).folder;
     filename_mic = ls_mic(1).name;
 else
-    [filename_mic, path_mic] = uigetfile([folder_root filesep '*_TTLcam.wav']);
+    [filename_mic, path_mic] = uigetfile([folder_root filesep '*_TTLcam' fmt]);
 end
-filename_datetime_tag = filename_mic(1:end-11);
+filename_datetime_tag = filename_mic(1:end-7-length(fmt));
 
-[y,Fs] = audioread(fullfile(path_mic,filename_mic));
+if strcmp(fmt, '.ttlcam')
+    fid = fopen(fullfile(path_mic,filename_mic), 'r');
+    % Read all data from the audio file in a vector
+    nAudioChannels_input_toSave = 1;
+    y = fread(fid,[nAudioChannels_input_toSave Inf],'single=>single')';
+    % Close the file
+    fclose(fid);
+    Fs = 192000/50;
+else
+    [y,Fs] = audioread(fullfile(path_mic,filename_mic));
+end
 
 %% Extract timestamps of camera TTLs (in microphone samples)
 
@@ -69,7 +83,7 @@ xlabel('Frame time (ms)')
 
 path_vid     = path_mic;
 filename_vid_root = [filename_datetime_tag '_CamFlir1_*.avi'];
-ls_vid       = dir([path_vid filename_vid_root]);
+ls_vid       = dir( fullfile(path_vid, filename_vid_root) );
 filename_vid = ls_vid(1).name;
 
 fprintf('Loading the video file to get the nr. of video frames, this will take a minute for long videos...\n');
@@ -81,16 +95,17 @@ v.NumFrames;
 if v.NumFrames ~= length(locs)
     fprintf('\n ! ! ! ! ! \n');
     fprintf(' The number of video frames is different from the number of TTL onsets extracted ! \n');
+    fprintf(' The number of video frames is %d, the number of TTL onsets extracted is %d \n', v.NumFrames, length(locs));
     fprintf(' The TTL onset extraction could have missed some TTLs, or some frames could have been dropped.\n')
     fprintf(' N.B. dropped frames do have a TTL (=camera sensor has been exposed) but they are not saved in the video file.\n')
     fprintf(' ! ! ! ! ! \n\n');
 end
 
 
-k = 0.05;
+thr_dt = 0.003; % how many sec a frame has to be offset to detect a dropped frame
 d_locs_sec = diff(locs)/Fs;
 frametime_snd = mean(d_locs_sec);
-problematic_ttls =  find(d_locs_sec > frametime_snd*(1+k) | d_locs_sec < frametime_snd*(1-k)) ;
+problematic_ttls =  find(d_locs_sec > (frametime_snd+thr_dt) | d_locs_sec < (frametime_snd-thr_dt)) ;
 nr_problematic_ttls = length( problematic_ttls );
 if nr_problematic_ttls
     fprintf('\n ! ! ! ! ! \n');
@@ -138,7 +153,8 @@ framerate_bon = 1/frametime_bon;
 %% Check for dropped frames
 
 % nr_dropped_frames_id = (T(end,3)+1) - v.NumFrames;
-nr_dropped_frames_id = sum( diff(T(:,3)) > 1 );
+inds_dropped_frames_id = find(diff(T(:,3)) > 1);
+nr_dropped_frames_id = length( inds_dropped_frames_id );
 if nr_dropped_frames_id
     fprintf('\n ! ! ! ! ! \n');
     fprintf(' Based on the frame IDs, %d frames were dropped ! \n', nr_dropped_frames_id);
@@ -147,27 +163,59 @@ end
 inds_dropped_id = find(diff(T(:,3)) > 1);
 dt_dropped_frames_id = (T(inds_dropped_id+1,1)-T(inds_dropped_id,1))/1e9;
 
+
+thr_dt = 0.005; % how many sec a frame has to be offset to detect a dropped frame
 dt_cam_sec = diff(T(:,1)/1e9);
 frametime_cam = mean(dt_cam_sec);
-nr_dropped_frames_cam = length( find(dt_cam_sec > frametime_cam*1.1) );
+inds_dropped = find( (dt_cam_sec > (frametime_cam+thr_dt)) | (dt_cam_sec < (frametime_cam-thr_dt)));
+nr_dropped_frames_cam = length( inds_dropped );
 if nr_dropped_frames_cam
     fprintf('\n ! ! ! ! ! \n');
     fprintf(' Based on inter-frame interval of camera timestamps, %d frames were dropped ! \n', nr_dropped_frames_cam);
     fprintf(' ! ! ! ! ! \n\n');
 end
-inds_dropped = find(dt_cam_sec > frametime_cam*1.1);
 dt_dropped_frames_cam = (T(inds_dropped+1,1)-T(inds_dropped,1))/1e9;
 
 
 dt_bon_sec = diff(T(:,2));
 frametime_bon = mean(dt_bon_sec);
-nr_dropped_frames_bon = length( find(dt_bon_sec > frametime_bon*1.9) );
+inds_dropped_frames_bon =  find(dt_bon_sec > frametime_bon*1.9);
+nr_dropped_frames_bon   = length( inds_dropped_frames_bon );
 % if nr_dropped_frames_bon
 %     fprintf('\n ! ! ! ! ! \n');
 %     fprintf(' Based on inter-frame interval of bonsai timestamps, %d frames were dropped ! \n', nr_dropped_frames_bon);
 %     fprintf(' ! ! ! ! ! \n\n');
 % end
 
+
+%% Get timestamps of microphone audio data (PTB clock)
+
+% % MicNrSamples  = D.audio_rec.MicNrSamples;
+% % MicTimeStamps = D.audio_rec.MicTimeStamps;
+% % MicSamps = cumsum(MicNrSamples) - MicNrSamples(1) + 1;
+% % % Now, MicTimeStamps gives you the timestamps (according to Behavior PC
+% % % clock) corresponding to the audio file samples indicated in MicSamps.
+% % MicSamps_all = [1 : length(y)]';
+% % 
+% % T_all = interp1(MicSamps, MicTimeStamps, MicSamps_all, 'linear', 'extrap');
+
+
+%% Get timestamps of FLIR camera TTL (PTB clock)
+
+MicNrSamples  = D.audio_rec.ttl.MicNrSamples;
+MicTimeStamps = D.audio_rec.ttl.MicTimeStamps;
+MicSamps = cumsum(MicNrSamples) - MicNrSamples(1) + 1;
+% Now, MicTimeStamps gives you the timestamps (according to Behavior PC
+% clock) corresponding to the audio file samples indicated in MicSamps.
+MicSamps_all = [1 : length(y)]';
+
+T_all = interp1(MicSamps, MicTimeStamps, MicSamps_all, 'linear', 'extrap');
+
+camflirTimeStamps = T_all(locs);
+
+% camflirTimeStamps = D.cam.camflir.TimeStamps; % as extracted at the end of trial acquisition
+
+camflirTimeStamps(inds_dropped) = [];
 
 
 %% Get frames corresponding to sound onsets
@@ -177,6 +225,7 @@ n_sound_types = length(soundTimeStamps_eachType);
 
 soundOnsets_frameNr_eachType = cell(n_sound_types, 1);
 
+thr_dt = frametime_snd;
 for s = 1 : n_sound_types
     soundTimeStamps_thisType = soundTimeStamps_eachType{s};
     n_sound_events_thisType = length(soundTimeStamps_thisType);
