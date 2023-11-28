@@ -102,7 +102,7 @@ if v.NumFrames ~= length(locs)
 end
 
 
-thr_dt = 0.003; % how many sec a frame has to be offset to detect a dropped frame
+thr_dt = 0.001; % how many sec a frame has to be offset to detect a dropped frame
 d_locs_sec = diff(locs)/Fs;
 frametime_snd = mean(d_locs_sec);
 problematic_ttls =  find(d_locs_sec > (frametime_snd+thr_dt) | d_locs_sec < (frametime_snd-thr_dt)) ;
@@ -211,12 +211,18 @@ MicSamps_all = [1 : length(y)]';
 
 T_all = interp1(MicSamps, MicTimeStamps, MicSamps_all, 'linear', 'extrap');
 
-camflirTimeStamps = T_all(locs);
+camflirTimeStamps_all = T_all(locs);
+
+%% Remove dropped frames from TTL timestamps
+
+camflirTimeStamps = camflirTimeStamps_all;
 
 % camflirTimeStamps = D.cam.camflir.TimeStamps; % as extracted at the end of trial acquisition
 
+% camflirTimeStamps(inds_dropped_frames_id) = [];
 camflirTimeStamps(inds_dropped) = [];
 
+assert( length(camflirTimeStamps) == v.NumFrames, 'The number of video frames is different from the number of TTL onsets extracted !')
 
 %% Get frames corresponding to sound onsets
 
@@ -246,3 +252,13 @@ for s = 1 : n_sound_types
     end
 end
 
+
+%%
+
+D.sounds.soundOnsets_frameNr_eachType = soundOnsets_frameNr_eachType;
+D.cam.camflir.TimeStamps_corr         = camflirTimeStamps;
+sounds = D.sounds;
+cam    = D.cam;
+save(fullfile(path_data, filename_data), 'sounds', 'cam', '-append');
+
+fprintf(' .mat file has been updated: %s \n\n', fullfile(path_data, filename_data))
