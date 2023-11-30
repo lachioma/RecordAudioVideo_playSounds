@@ -3,7 +3,7 @@
 
 clear
 
-folder_root = 'Y:\Users\ariadna\behavior_PP\25679\25679_3_sounds\2023-11-24';
+folder_root = 'Y:\Users\ariadna\behavior_PP\25681\25681_2_sounds\2023-11-22';
 
 fmt = '.wav';
 fmt = '.flac';
@@ -92,13 +92,17 @@ fprintf('Video file loaded, nr. of video frames: %d \n', v.NumFrames);
 
 v.NumFrames;
 
-if v.NumFrames ~= length(locs)
+nr_dropped_frames = length(locs) - v.NumFrames;
+
+if nr_dropped_frames ~= 0
     fprintf('\n ! ! ! ! ! \n');
-    fprintf(' The number of video frames is different from the number of TTL onsets extracted ! \n');
+    fprintf(' There are %d dropped frames ! \n', nr_dropped_frames);
     fprintf(' The number of video frames is %d, the number of TTL onsets extracted is %d \n', v.NumFrames, length(locs));
     fprintf(' The TTL onset extraction could have missed some TTLs, or some frames could have been dropped.\n')
     fprintf(' N.B. dropped frames do have a TTL (=camera sensor has been exposed) but they are not saved in the video file.\n')
     fprintf(' ! ! ! ! ! \n\n');
+else
+    fprintf('\n Great, no dropped frames! \n')
 end
 
 
@@ -152,41 +156,43 @@ framerate_bon = 1/frametime_bon;
 
 %% Check for dropped frames
 
-% nr_dropped_frames_id = (T(end,3)+1) - v.NumFrames;
-inds_dropped_frames_id = find(diff(T(:,3)) > 1);
-nr_dropped_frames_id = length( inds_dropped_frames_id );
-if nr_dropped_frames_id
-    fprintf('\n ! ! ! ! ! \n');
-    fprintf(' Based on the frame IDs, %d frames were dropped ! \n', nr_dropped_frames_id);
-    fprintf(' ! ! ! ! ! \n\n');
+if nr_dropped_frames ~= 0
+
+    % nr_dropped_frames_id = (T(end,3)+1) - v.NumFrames;
+    inds_dropped_frames_id = find(diff(T(:,3)) > 1);
+    nr_dropped_frames_id = length( inds_dropped_frames_id );
+    if nr_dropped_frames_id
+        fprintf('\n ! ! ! ! ! \n');
+        fprintf(' Based on the frame IDs, %d frames were dropped ! \n', nr_dropped_frames_id);
+        fprintf(' ! ! ! ! ! \n\n');
+    end
+    dt_dropped_frames_id = (T(inds_dropped_frames_id+1,1)-T(inds_dropped_frames_id,1))/1e9;
+    
+    
+    thr_dt = 0.005; % how many sec a frame has to be offset to detect a dropped frame
+    dt_cam_sec = diff(T(:,1)/1e9);
+    frametime_cam = mean(dt_cam_sec);
+    inds_dropped = find( (dt_cam_sec > (frametime_cam+thr_dt)) | (dt_cam_sec < (frametime_cam-thr_dt)));
+    nr_dropped_frames_cam = length( inds_dropped );
+    if nr_dropped_frames_cam
+        fprintf('\n ! ! ! ! ! \n');
+        fprintf(' Based on inter-frame interval of camera timestamps, %d frames were dropped ! \n', nr_dropped_frames_cam);
+        fprintf(' ! ! ! ! ! \n\n');
+    end
+    dt_dropped_frames_cam = (T(inds_dropped+1,1)-T(inds_dropped,1))/1e9;
+    
+    
+    dt_bon_sec = diff(T(:,2));
+    frametime_bon = mean(dt_bon_sec);
+    inds_dropped_frames_bon =  find(dt_bon_sec > frametime_bon*1.9);
+    nr_dropped_frames_bon   = length( inds_dropped_frames_bon );
+    % if nr_dropped_frames_bon
+    %     fprintf('\n ! ! ! ! ! \n');
+    %     fprintf(' Based on inter-frame interval of bonsai timestamps, %d frames were dropped ! \n', nr_dropped_frames_bon);
+    %     fprintf(' ! ! ! ! ! \n\n');
+    % end
+
 end
-inds_dropped_id = find(diff(T(:,3)) > 1);
-dt_dropped_frames_id = (T(inds_dropped_id+1,1)-T(inds_dropped_id,1))/1e9;
-
-
-thr_dt = 0.005; % how many sec a frame has to be offset to detect a dropped frame
-dt_cam_sec = diff(T(:,1)/1e9);
-frametime_cam = mean(dt_cam_sec);
-inds_dropped = find( (dt_cam_sec > (frametime_cam+thr_dt)) | (dt_cam_sec < (frametime_cam-thr_dt)));
-nr_dropped_frames_cam = length( inds_dropped );
-if nr_dropped_frames_cam
-    fprintf('\n ! ! ! ! ! \n');
-    fprintf(' Based on inter-frame interval of camera timestamps, %d frames were dropped ! \n', nr_dropped_frames_cam);
-    fprintf(' ! ! ! ! ! \n\n');
-end
-dt_dropped_frames_cam = (T(inds_dropped+1,1)-T(inds_dropped,1))/1e9;
-
-
-dt_bon_sec = diff(T(:,2));
-frametime_bon = mean(dt_bon_sec);
-inds_dropped_frames_bon =  find(dt_bon_sec > frametime_bon*1.9);
-nr_dropped_frames_bon   = length( inds_dropped_frames_bon );
-% if nr_dropped_frames_bon
-%     fprintf('\n ! ! ! ! ! \n');
-%     fprintf(' Based on inter-frame interval of bonsai timestamps, %d frames were dropped ! \n', nr_dropped_frames_bon);
-%     fprintf(' ! ! ! ! ! \n\n');
-% end
-
 
 %% Get timestamps of microphone audio data (PTB clock)
 
@@ -216,11 +222,22 @@ camflirTimeStamps_all = T_all(locs);
 %% Remove dropped frames from TTL timestamps
 
 camflirTimeStamps = camflirTimeStamps_all;
-
 % camflirTimeStamps = D.cam.camflir.TimeStamps; % as extracted at the end of trial acquisition
 
-% camflirTimeStamps(inds_dropped_frames_id) = [];
-camflirTimeStamps(inds_dropped) = [];
+if nr_dropped_frames ~= 0
+
+    if length(inds_dropped_frames_id) == nr_dropped_frames
+        inds_dropped_frames = inds_dropped_frames_id;
+
+    % If inds_dropped_frames_id has one frame less than the actual
+    % nr_dropped_frames, take also the very last ttl as dropped frame:
+    elseif length(inds_dropped_frames_id) == nr_dropped_frames-1
+        inds_dropped_frames = [inds_dropped_frames_id; length(loc)];
+    end
+    camflirTimeStamps(inds_dropped_frames) = [];
+
+%     camflirTimeStamps(inds_dropped) = [];
+end
 
 assert( length(camflirTimeStamps) == v.NumFrames, 'The number of video frames is different from the number of TTL onsets extracted !')
 
