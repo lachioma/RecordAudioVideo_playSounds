@@ -236,7 +236,10 @@ for s = 1 : n_sound_types
     soundTimeStamps_thisType = soundTimeStamps_eachType{s};
     n_sound_events_thisType = length(soundTimeStamps_thisType);
     for ss = 1 : n_sound_events_thisType
-        sound_onset = soundTimeStamps_thisType(ss) + D.sounds.PredictedOutputLatency;
+        % N.B. soundTimeStamps_thisType already includes the
+        % PredictedOutputLatency, so do not add it again!
+        % sound_onset = soundTimeStamps_thisType(ss) + D.sounds.PredictedOutputLatency;
+        sound_onset = soundTimeStamps_thisType(ss);
         % % Get closest frame to sound onset (it can be the frame right 
         % after or right before the sound onset):
         % [dt, ix_min] = min( abs(sound_onset - camflirTimeStamps) );
@@ -253,7 +256,7 @@ for s = 1 : n_sound_types
 end
 
 
-%%
+%% Save camflirTimeStamps and soundOnsets_frameNr_eachType
 
 D.sounds.soundOnsets_frameNr_eachType = soundOnsets_frameNr_eachType;
 D.cam.camflir.TimeStamps_corr         = camflirTimeStamps;
