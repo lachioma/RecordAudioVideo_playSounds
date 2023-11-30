@@ -30,6 +30,28 @@ else
     [y,Fs] = audioread(fullfile(path_mic,filename_mic));
 end
 
+%% Load .csv camera timestamps
+
+% path_vidcsv     = path_mic;
+% filename_vidcsv = [filename_datetime_tag '_cam1.csv'];
+
+% Column 1: camera timestamps of each frame according to the FLIR camera internal clock (in nanoseconds)
+% Column 2: camera timestamps (in Bonsai clock) of every time Bonsai received a frame from the camera (in seconds)
+% Column 3: frame IDs as given by the FLIR camera processor (this might be useful to identify dropped frames)
+
+% T = readmatrix(fullfile(path_vidcsv,filename_vidcsv), ...
+%         'OutputType','double', 'Delimiter',',');
+
+path_data     = path_mic;
+filename_data = [filename_datetime_tag '_data.mat'];
+
+D = load( fullfile(path_data, filename_data));
+
+T(:,1) = D.cam.camflir.Timestamp_camera_clock_us;
+T(:,2) = D.cam.camflir.Timestamp_bonsai_clock_s;
+T(:,3) = D.cam.camflir.FrameID;
+
+
 %% Extract timestamps of camera TTLs (in microphone samples)
 
 % First assess the shape of the TTL, i.e. the values of the HIGH and LOW
@@ -79,6 +101,48 @@ figure
 histogram(diff(locs)/Fs*1000)
 xlabel('Frame time (ms)')
 
+
+%% Get duration, frame time, and frame rate according to all clocks
+
+
+dur_snd = (locs(end) - locs(1)) / Fs;
+dur_cam = (T(end,1) - T(1,1)) / 1e9;
+dur_bon = (T(end,2) - T(1,2));
+
+frametime_snd = mean(diff(locs)/Fs);
+frametime_cam = mean(diff(T(1:end,1))) / 1e9;
+frametime_bon = mean(diff(T(1:end,2)));
+
+framerate_snd = 1/frametime_snd;
+framerate_cam = 1/frametime_cam;
+framerate_bon = 1/frametime_bon;
+
+%% Get timestamps of FLIR camera TTL (PTB clock)
+
+MicNrSamples  = D.audio_rec.ttl.MicNrSamples;
+MicTimeStamps = D.audio_rec.ttl.MicTimeStamps;
+MicSamps = cumsum(MicNrSamples) - MicNrSamples(1) + 1;
+% Now, MicTimeStamps gives you the timestamps (according to Behavior PC
+% clock) corresponding to the audio file samples indicated in MicSamps.
+MicSamps_all = [1 : length(y)]';
+
+T_all = interp1(MicSamps, MicTimeStamps, MicSamps_all, 'linear', 'extrap');
+
+camflirTimeStamps_all = T_all(locs);
+
+
+%% Get timestamps of microphone audio data (PTB clock)
+
+% % MicNrSamples  = D.audio_rec.MicNrSamples;
+% % MicTimeStamps = D.audio_rec.MicTimeStamps;
+% % MicSamps = cumsum(MicNrSamples) - MicNrSamples(1) + 1;
+% % % Now, MicTimeStamps gives you the timestamps (according to Behavior PC
+% % % clock) corresponding to the audio file samples indicated in MicSamps.
+% % MicSamps_all = [1 : length(y)]';
+% % 
+% % T_all = interp1(MicSamps, MicTimeStamps, MicSamps_all, 'linear', 'extrap');
+
+
 %% Get number of video frames and check consistency with TTLs
 
 path_vid     = path_mic;
@@ -86,11 +150,10 @@ filename_vid_root = [filename_datetime_tag '_CamFlir1_*.avi'];
 ls_vid       = dir( fullfile(path_vid, filename_vid_root) );
 filename_vid = ls_vid(1).name;
 
-fprintf('Loading the video file to get the nr. of video frames, this will take a minute for long videos...\n');
+fprintf('Loading the video file to get the nr. of video frames (this will take a minute for long videos or when loading from the server)...\n');
 v = VideoReader(fullfile(path_vid,filename_vid));
 fprintf('Video file loaded, nr. of video frames: %d \n', v.NumFrames);
 
-v.NumFrames;
 
 nr_dropped_frames = length(locs) - v.NumFrames;
 
@@ -114,45 +177,11 @@ nr_problematic_ttls = length( problematic_ttls );
 if nr_problematic_ttls
     fprintf('\n ! ! ! ! ! \n');
     fprintf(' Based on inter-TTL interval, %d TTLs were too close or too far apart compared to expected! \n', nr_problematic_ttls);
-    fprintf(' Likely something is wrong with the TTL onset extraction... \n')
+    fprintf(' There might be something wrong with the TTL onset extraction (but not necessarily). \n')
     fprintf(' ! ! ! ! ! \n\n');
 end
 
-%% Load .csv camera timestamps
 
-% path_vidcsv     = path_mic;
-% filename_vidcsv = [filename_datetime_tag '_cam1.csv'];
-
-% Column 1: camera timestamps of each frame according to the FLIR camera internal clock (in nanoseconds)
-% Column 2: camera timestamps (in Bonsai clock) of every time Bonsai received a frame from the camera (in seconds)
-% Column 3: frame IDs as given by the FLIR camera processor (this might be useful to identify dropped frames)
-
-% T = readmatrix(fullfile(path_vidcsv,filename_vidcsv), ...
-%         'OutputType','double', 'Delimiter',',');
-
-path_data     = path_mic;
-filename_data = [filename_datetime_tag '_data.mat'];
-
-D = load( fullfile(path_data, filename_data));
-
-T(:,1) = D.cam.camflir.Timestamp_camera_clock_us;
-T(:,2) = D.cam.camflir.Timestamp_bonsai_clock_s;
-T(:,3) = D.cam.camflir.FrameID;
-
-%% Get duration, frame time, and frame rate according to all clocks
-
-
-dur_snd = (locs(end) - locs(1)) / Fs;
-dur_cam = (T(end,1) - T(1,1)) / 1e9;
-dur_bon = (T(end,2) - T(1,2));
-
-frametime_snd = mean(diff(locs)/Fs);
-frametime_cam = mean(diff(T(1:end,1))) / 1e9;
-frametime_bon = mean(diff(T(1:end,2)));
-
-framerate_snd = 1/frametime_snd;
-framerate_cam = 1/frametime_cam;
-framerate_bon = 1/frametime_bon;
 
 %% Check for dropped frames
 
@@ -172,14 +201,14 @@ if nr_dropped_frames ~= 0
     thr_dt = 0.005; % how many sec a frame has to be offset to detect a dropped frame
     dt_cam_sec = diff(T(:,1)/1e9);
     frametime_cam = mean(dt_cam_sec);
-    inds_dropped = find( (dt_cam_sec > (frametime_cam+thr_dt)) | (dt_cam_sec < (frametime_cam-thr_dt)));
-    nr_dropped_frames_cam = length( inds_dropped );
+    inds_dropped_cam = find( (dt_cam_sec > (frametime_cam+thr_dt)) | (dt_cam_sec < (frametime_cam-thr_dt)));
+    nr_dropped_frames_cam = length( inds_dropped_cam );
     if nr_dropped_frames_cam
         fprintf('\n ! ! ! ! ! \n');
         fprintf(' Based on inter-frame interval of camera timestamps, %d frames were dropped ! \n', nr_dropped_frames_cam);
         fprintf(' ! ! ! ! ! \n\n');
     end
-    dt_dropped_frames_cam = (T(inds_dropped+1,1)-T(inds_dropped,1))/1e9;
+    dt_dropped_frames_cam = (T(inds_dropped_cam+1,1)-T(inds_dropped_cam,1))/1e9;
     
     
     dt_bon_sec = diff(T(:,2));
@@ -192,32 +221,42 @@ if nr_dropped_frames ~= 0
     %     fprintf(' ! ! ! ! ! \n\n');
     % end
 
+
+
+    if isequal(inds_dropped_frames_id, inds_dropped_cam)
+        fprintf('Dropped frames based on frame IDs and based on inter-frame interval of camera timestamps are matching. This is good. \n')
+    else
+        fprintf('\n ! ! ! ! ! \n');
+        fprintf('Dropped frames based on frame IDs and based on inter-frame interval of camera timestamps are NOT matching. \n')
+        fprintf('You need to decide which dropped frames to take, by default we take Dropped frames based on frame IDs \n')
+        fprintf(' ! ! ! ! ! \n\n');
+    end
+
+
+    if length(inds_dropped_frames_id) == nr_dropped_frames
+        inds_dropped_frames = inds_dropped_frames_id;
+
+    % If inds_dropped_frames_id has one frame less than the actual
+    % nr_dropped_frames, take also the very last ttl as dropped frame:
+    elseif length(inds_dropped_frames_id) == nr_dropped_frames-1
+        inds_dropped_frames = [inds_dropped_frames_id; length(camflirTimeStamps_all)];
+
+    else
+        fprintf('\n ! ! ! ! ! \n');
+        fprintf('Dropped frames based on frame IDs are too few compared to nr_dropped_frames \n')
+        fprintf('Something is wrong (more than usual), check manually what is going on... \n')
+        fprintf(' ! ! ! ! ! \n\n');
+    end
+
+else
+
+    inds_dropped_frames = [];
+
 end
 
-%% Get timestamps of microphone audio data (PTB clock)
-
-% % MicNrSamples  = D.audio_rec.MicNrSamples;
-% % MicTimeStamps = D.audio_rec.MicTimeStamps;
-% % MicSamps = cumsum(MicNrSamples) - MicNrSamples(1) + 1;
-% % % Now, MicTimeStamps gives you the timestamps (according to Behavior PC
-% % % clock) corresponding to the audio file samples indicated in MicSamps.
-% % MicSamps_all = [1 : length(y)]';
-% % 
-% % T_all = interp1(MicSamps, MicTimeStamps, MicSamps_all, 'linear', 'extrap');
 
 
-%% Get timestamps of FLIR camera TTL (PTB clock)
 
-MicNrSamples  = D.audio_rec.ttl.MicNrSamples;
-MicTimeStamps = D.audio_rec.ttl.MicTimeStamps;
-MicSamps = cumsum(MicNrSamples) - MicNrSamples(1) + 1;
-% Now, MicTimeStamps gives you the timestamps (according to Behavior PC
-% clock) corresponding to the audio file samples indicated in MicSamps.
-MicSamps_all = [1 : length(y)]';
-
-T_all = interp1(MicSamps, MicTimeStamps, MicSamps_all, 'linear', 'extrap');
-
-camflirTimeStamps_all = T_all(locs);
 
 %% Remove dropped frames from TTL timestamps
 
@@ -226,20 +265,12 @@ camflirTimeStamps = camflirTimeStamps_all;
 
 if nr_dropped_frames ~= 0
 
-    if length(inds_dropped_frames_id) == nr_dropped_frames
-        inds_dropped_frames = inds_dropped_frames_id;
-
-    % If inds_dropped_frames_id has one frame less than the actual
-    % nr_dropped_frames, take also the very last ttl as dropped frame:
-    elseif length(inds_dropped_frames_id) == nr_dropped_frames-1
-        inds_dropped_frames = [inds_dropped_frames_id; length(loc)];
-    end
     camflirTimeStamps(inds_dropped_frames) = [];
 
-%     camflirTimeStamps(inds_dropped) = [];
 end
 
 assert( length(camflirTimeStamps) == v.NumFrames, 'The number of video frames is different from the number of TTL onsets extracted !')
+
 
 %% Get frames corresponding to sound onsets
 
