@@ -3,7 +3,7 @@
 
 clear
 
-folder_root = 'Y:\Users\ariadna\behavior_PP\25681\25681_2_sounds\2023-11-22';
+folder_root = 'Y:\Users\ariadna\behavior_PP\26005\26005_1_sounds\2023-11-24';
 
 fmt = '.wav';
 fmt = '.flac';
@@ -223,12 +223,12 @@ if nr_dropped_frames ~= 0
 
 
 
-    if isequal(inds_dropped_frames_id, inds_dropped_cam)
+    if ~isempty(inds_dropped_frames_id) && isequal(inds_dropped_frames_id, inds_dropped_cam)
         fprintf('Dropped frames based on frame IDs and based on inter-frame interval of camera timestamps are matching. This is good. \n')
     else
         fprintf('\n ! ! ! ! ! \n');
-        fprintf('Dropped frames based on frame IDs and based on inter-frame interval of camera timestamps are NOT matching. \n')
-        fprintf('You need to decide which dropped frames to take, by default we take Dropped frames based on frame IDs \n')
+        fprintf('Dropped frames based on frame IDs and based on inter-frame interval of camera timestamps are empty or NOT matching. \n')
+        fprintf('You need to decide which dropped frames to take. By default we take Dropped frames based on frame IDs \n')
         fprintf(' ! ! ! ! ! \n\n');
     end
 
@@ -279,7 +279,7 @@ n_sound_types = length(soundTimeStamps_eachType);
 
 soundOnsets_frameNr_eachType = cell(n_sound_types, 1);
 
-thr_dt = frametime_snd;
+thr_dt = frametime_snd + 0.005;
 for s = 1 : n_sound_types
     soundTimeStamps_thisType = soundTimeStamps_eachType{s};
     n_sound_events_thisType = length(soundTimeStamps_thisType);
