@@ -1,6 +1,7 @@
 # RecordAudioVideo_playSounds
 
-![image](https://github.com/lachioma/RecordAudioVideo_playSounds/assets/29898879/ef75f14d-d441-4fc9-b1ca-32be7f5a0acf)
+![image](https://github.com/lachioma/RecordAudioVideo_playSounds/assets/29898879/f8d87686-0dfb-4f97-a40f-b3818db4a8ca)
+
 
 ## Usage
 ### To start recording
@@ -24,6 +25,10 @@ Sounds are also timestamped in Matlab clock slightly less accurate than sound ca
 * I've also added a feature to extract on the fly the FLIR frames timestamps in both sound card clock and Matlab clock.
   
 * So the system allows time-stamping of FLIR cameras, microphones, and sounds in both clocks, and orange cameras in Matlab clock.
+
+* I've added a "LogDiary" (v1.2): for each trial, all messages displayed in the command window are saved as a txt file.
+
+* You can play a Looming Disc on demand (press the button) (v1.2). At button press, the disc appears at its onset size, it expands linearly until final size, it stays at final size for a post-stim interval, then it disappears. Three timestamps (PTB clock) are taken at onset, final size, disappearance.
 
 
 ## Data
@@ -93,3 +98,13 @@ This extraction is done after the trial recording is stopped and it might be wro
 
 Settings and timestamps of sounds that are played back
 * `soundTimeStamps`: PTB timestamps of every sound played, taken by the PTB sound playback command PsychPortAudio(`Start`).
+
+### About the binary files
+
+Binary files are used to save the data on the fly during recording. After each trial, these files are converted or used, and if all went well they are then deleted.
+
+* _audiorec.mic: 4 microphones audio file; _audiorec.mic converted into _audiorec.flac, then the binary file is deleted.
+  
+* _TTLcam.ttlcam: TTL from FLIR camera; _TTLcam.ttlcam converted into _TTLcam.flac, then the binary file is deleted. From this file, cam FLIR timestamps are extracted.
+
+* _TTLsound.ttlsnd: TTL from sounds; this file is not converted, but values are extracted and then the ttlsnd is deleted.
