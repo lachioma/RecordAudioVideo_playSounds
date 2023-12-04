@@ -226,7 +226,7 @@ if nr_dropped_frames ~= 0
 
 
     if ~isempty(inds_dropped_frames_id) && isequal(inds_dropped_frames_id, inds_dropped_cam)
-        fprintf('Dropped frames based on frame IDs and based on inter-frame interval of camera timestamps are matching. This is good. \n')
+        fprintf('Dropped frames based on frame IDs and based on inter-frame interval of camera timestamps are matching. This is good... \n')
     else
         fprintf('\n ! ! ! ! ! \n');
         fprintf('Dropped frames based on frame IDs and based on inter-frame interval of camera timestamps are empty or NOT matching. \n')
@@ -248,6 +248,8 @@ if nr_dropped_frames ~= 0
         fprintf('Dropped frames based on frame IDs are too few compared to nr_dropped_frames \n')
         fprintf('Something is wrong (more than usual), check manually what is going on... \n')
         fprintf(' ! ! ! ! ! \n\n');
+
+        % inds_dropped_frames = inds_dropped_frames_bon;
     end
 
 else
