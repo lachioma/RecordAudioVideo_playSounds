@@ -3,10 +3,10 @@
 
 clear
 
-folder_root = 'Y:\Users\ariadna\behavior_PP\26005\26005_1_sounds\2023-11-24';
+folder_root = 'Y:\Users\ariadna\behavior_PP\25681\25681_3_sounds\2023-11-24';
 
 fmt = '.wav';
-fmt = '.flac';
+% fmt = '.flac';
 % fmt = '.ttlcam'; % binary file
 
 ls_mic = dir([folder_root filesep '*_TTLcam' fmt]);
@@ -29,6 +29,8 @@ if strcmp(fmt, '.ttlcam')
 else
     [y,Fs] = audioread(fullfile(path_mic,filename_mic));
 end
+
+fprintf('File loaded: %s\n', fullfile(path_mic,filename_mic))
 
 %% Load .csv camera timestamps
 
@@ -256,8 +258,6 @@ end
 
 
 
-
-
 %% Remove dropped frames from TTL timestamps
 
 camflirTimeStamps = camflirTimeStamps_all;
@@ -313,3 +313,9 @@ cam    = D.cam;
 save(fullfile(path_data, filename_data), 'sounds', 'cam', '-append');
 
 fprintf(' .mat file has been updated: %s \n\n', fullfile(path_data, filename_data))
+
+
+%% get_frameID_from_frames_via_OCR__script
+
+get_frameID_from_frames_via_OCR__script.m
+
