@@ -236,12 +236,12 @@ if nr_dropped_frames ~= 0
 
 
     if length(inds_dropped_frames_id) == nr_dropped_frames
-        inds_dropped_frames = inds_dropped_frames_id;
+        inds_dropped_frames = inds_dropped_frames_id + 1;
 
     % If inds_dropped_frames_id has one frame less than the actual
     % nr_dropped_frames, take also the very last ttl as dropped frame:
     elseif length(inds_dropped_frames_id) == nr_dropped_frames-1
-        inds_dropped_frames = [inds_dropped_frames_id; length(camflirTimeStamps_all)];
+        inds_dropped_frames = [inds_dropped_frames_id + 1; length(camflirTimeStamps_all)];
 
     else
         fprintf('\n ! ! ! ! ! \n');
