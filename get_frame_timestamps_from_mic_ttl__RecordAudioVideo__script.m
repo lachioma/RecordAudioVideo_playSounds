@@ -244,11 +244,23 @@ if nr_dropped_frames ~= 0
         inds_dropped_frames = [inds_dropped_frames_id + 1; length(camflirTimeStamps_all)];
 
     else
+        d_drop_frames = nr_dropped_frames - length(inds_dropped_frames_id);
         fprintf('\n ! ! ! ! ! \n');
         fprintf('Dropped frames based on frame IDs are too few compared to nr_dropped_frames \n')
         fprintf('Something is wrong (more than usual), check manually what is going on... \n')
         fprintf(' ! ! ! ! ! \n\n');
 
+        answer = questdlg( sprintf('Dropped frames based on frame IDs: %d.\nTotal dropped frames: %d\nDifference: %d\nIf you Proceed, we will ignore the last %d ttl timestamps.', length(inds_dropped_frames_id), nr_dropped_frames, d_drop_frames, d_drop_frames),...
+            'Problem identifying dropped frames. Proceed?',...
+              'Proceed','Check manually','Check manually');
+        if matches(answer, 'Proceed')
+            inds_dropped_frames = [ inds_dropped_frames_id + 1;...
+                                    ( length(camflirTimeStamps_all)-d_drop_frames+1:length(camflirTimeStamps_all) )' ];
+        else
+            % Pause execution of program in debug mode, to check what is
+            % going on
+            keyboard; 
+        end
         % inds_dropped_frames = inds_dropped_frames_bon;
     end
 
