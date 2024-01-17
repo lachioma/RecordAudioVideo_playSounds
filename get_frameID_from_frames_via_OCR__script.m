@@ -13,7 +13,7 @@ fprintf('Video file loaded, nr. of video frames: %d \n', v.NumFrames);
 % frame = readFrame(v);
 % Load last frame (because it contains the largest frame ID number, so you
 % can make sure that the ROI will contain the whole frame ID):
-frame = read(v,Inf);
+frame = read(v,5249);
 
 figure;image(frame);
 
@@ -68,7 +68,8 @@ frameIDcam = T(:,3);
 
 isequal(frameIDcam, frameIDocr)
 
-
+figure;
+plot(frameIDcam - frameIDocr)
 
 
 %% Supporting function disp_sameline
