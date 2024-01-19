@@ -1,22 +1,26 @@
 
-%% Select and load audio file with FLIR camera TTL
+%% Specify data folder
 
 clear
 
-folder_root = 'Y:\Users\ariadna\behavior_PP\25681\25681_3_sounds\2023-11-24';
+data_folder = 'Y:\Users\ariadna\behavior_PP\26008\26008_3_sounds\2023-12-15';
 
-fmt = '.wav';
-% fmt = '.flac';
-% fmt = '.ttlcam'; % binary file
+%% Load audio file with FLIR camera TTL
 
-ls_mic = dir([folder_root filesep '*_TTLcam' fmt]);
-if length(ls_mic) == 1
-    path_mic = ls_mic(1).folder;
-    filename_mic = ls_mic(1).name;
-else
-    [filename_mic, path_mic] = uigetfile([folder_root filesep '*_TTLcam' fmt]);
+possible_formats = {'.wav', '.flac', '.ttlcam'};
+for f = 1 : length(possible_formats)
+    fmt = possible_formats{f};
+    ls_mic = dir([data_folder filesep '*_TTLcam' fmt]);
+    if length(ls_mic) == 1
+        path_mic = ls_mic(1).folder;
+        filename_mic = ls_mic(1).name;
+        break
+    elseif f==length(possible_formats)
+        [filename_mic, path_mic] = uigetfile([data_folder filesep '*_TTLcam']);
+    end
 end
 filename_datetime_tag = filename_mic(1:end-7-length(fmt));
+
 
 if strcmp(fmt, '.ttlcam')
     fid = fopen(fullfile(path_mic,filename_mic), 'r');
@@ -25,7 +29,8 @@ if strcmp(fmt, '.ttlcam')
     y = fread(fid,[nAudioChannels_input_toSave Inf],'single=>single')';
     % Close the file
     fclose(fid);
-    Fs = 192000/50;
+    downsampling = 50; % this value is hardcoded in RecordAudioVideo_playSounds.mlapp
+    Fs = 192000/downsampling;
 else
     [y,Fs] = audioread(fullfile(path_mic,filename_mic));
 end
@@ -123,7 +128,7 @@ framerate_bon = 1/frametime_bon;
 
 MicNrSamples  = D.audio_rec.ttl.MicNrSamples;
 MicTimeStamps = D.audio_rec.ttl.MicTimeStamps;
-MicSamps = cumsum(MicNrSamples) - MicNrSamples(1) + 1;
+MicSamps = cumsum(MicNrSamples) - MicNrSamples(1) + 1; % (this is correct, I checked)
 % Now, MicTimeStamps gives you the timestamps (according to Behavior PC
 % clock) corresponding to the audio file samples indicated in MicSamps.
 MicSamps_all = [1 : length(y)]';
@@ -175,6 +180,7 @@ thr_dt = 0.001; % how many sec a frame has to be offset to detect a dropped fram
 d_locs_sec = diff(locs)/Fs;
 frametime_snd = mean(d_locs_sec);
 problematic_ttls =  find(d_locs_sec > (frametime_snd+thr_dt) | d_locs_sec < (frametime_snd-thr_dt)) ;
+dt_problematic_ttls = d_locs_sec(problematic_ttls);
 nr_problematic_ttls = length( problematic_ttls );
 if nr_problematic_ttls
     fprintf('\n ! ! ! ! ! \n');
@@ -189,18 +195,28 @@ end
 
 if nr_dropped_frames ~= 0
 
-    % nr_dropped_frames_id = (T(end,3)+1) - v.NumFrames;
+%     % nr_dropped_frames_id = (T(end,3)+1) - v.NumFrames;
+%     inds_dropped_frames_id = find(diff(T(:,3)) > 1);
+%     nr_dropped_frames_id = length( inds_dropped_frames_id );
+%     if nr_dropped_frames_id
+%         fprintf('\n ! ! ! ! ! \n');
+%         fprintf(' Based on the frame IDs, %d frames were dropped ! \n', nr_dropped_frames_id);
+%         fprintf(' ! ! ! ! ! \n\n');
+%     end
+%     dt_dropped_frames_id = (T(inds_dropped_frames_id+1,1)-T(inds_dropped_frames_id,1))/1e9;
     inds_dropped_frames_id = find(diff(T(:,3)) > 1);
-    nr_dropped_frames_id = length( inds_dropped_frames_id );
+    dt_dropped_frames_id   = (T(inds_dropped_frames_id+1,1)-T(inds_dropped_frames_id,1))/1e9;
+    nr_dropped_frames_id2   = arrayfun( @(x)(T(x+1,3)-T(x,3))-1, inds_dropped_frames_id ) ;
+    nr_dropped_frames_id    = sum(nr_dropped_frames_id2);
+    inds_dropped_frames_id2 = cell2mat( arrayfun( @(x,y)(x:x+y-1)', inds_dropped_frames_id, nr_dropped_frames_id2 , 'UniformOutput', false) );
     if nr_dropped_frames_id
         fprintf('\n ! ! ! ! ! \n');
         fprintf(' Based on the frame IDs, %d frames were dropped ! \n', nr_dropped_frames_id);
         fprintf(' ! ! ! ! ! \n\n');
     end
-    dt_dropped_frames_id = (T(inds_dropped_frames_id+1,1)-T(inds_dropped_frames_id,1))/1e9;
     
     
-    thr_dt = 0.005; % how many sec a frame has to be offset to detect a dropped frame
+    thr_dt = 0.002; % how many sec a frame has to be offset to detect a dropped frame
     dt_cam_sec = diff(T(:,1)/1e9);
     frametime_cam = mean(dt_cam_sec);
     inds_dropped_cam = find( (dt_cam_sec > (frametime_cam+thr_dt)) | (dt_cam_sec < (frametime_cam-thr_dt)));
@@ -224,38 +240,41 @@ if nr_dropped_frames ~= 0
     % end
 
 
-
     if ~isempty(inds_dropped_frames_id) && isequal(inds_dropped_frames_id, inds_dropped_cam)
-        fprintf('Dropped frames based on frame IDs and based on inter-frame interval of camera timestamps are matching. This is good... \n')
+        fprintf('Dropped frames based on frame IDs and based on inter-frame interval of camera timestamps are matching. This is good... \n\n')
     else
         fprintf('\n ! ! ! ! ! \n');
         fprintf('Dropped frames based on frame IDs and based on inter-frame interval of camera timestamps are empty or NOT matching. \n')
-        fprintf('You need to decide which dropped frames to take. By default we take Dropped frames based on frame IDs \n')
+%         fprintf('You need to decide which dropped frames to take. By default we take Dropped frames based on frame IDs \n')
+        fprintf('We will take Dropped frames based on frame IDs \n')
         fprintf(' ! ! ! ! ! \n\n');
     end
 
 
-    if length(inds_dropped_frames_id) == nr_dropped_frames
-        inds_dropped_frames = inds_dropped_frames_id + 1;
+    if nr_dropped_frames_id == nr_dropped_frames
+        inds_dropped_frames = inds_dropped_frames_id2 + 1;
+
+        fprintf('All dropped frames were identified using frame IDs. Good, we proceed!\n\n')
 
     % If inds_dropped_frames_id has one frame less than the actual
     % nr_dropped_frames, take also the very last ttl as dropped frame:
-    elseif length(inds_dropped_frames_id) == nr_dropped_frames-1
-        inds_dropped_frames = [inds_dropped_frames_id + 1; length(camflirTimeStamps_all)];
-
+    elseif nr_dropped_frames_id == nr_dropped_frames-1
+        inds_dropped_frames = [inds_dropped_frames_id2 + 1; length(camflirTimeStamps_all)];
+        fprintf('All dropped frames minus 1 were identified using frame IDs. Ok, we proceed.\n\n')
     else
-        d_drop_frames = nr_dropped_frames - length(inds_dropped_frames_id);
+        d_drop_frames = nr_dropped_frames - nr_dropped_frames_id;
         fprintf('\n ! ! ! ! ! \n');
         fprintf('Dropped frames based on frame IDs are too few compared to nr_dropped_frames \n')
         fprintf('Something is wrong (more than usual), check manually what is going on... \n')
         fprintf(' ! ! ! ! ! \n\n');
 
-        answer = questdlg( sprintf('Dropped frames based on frame IDs: %d.\nTotal dropped frames: %d\nDifference: %d\nIf you ''Proceed'', we will ignore the last %d ttl timestamps.\nIf you ''Check manually'', we''ll enter debug mode.', length(inds_dropped_frames_id), nr_dropped_frames, d_drop_frames, d_drop_frames),...
+        answer = questdlg( sprintf('Dropped frames based on frame IDs: %d.\nTotal dropped frames: %d\nDifference: %d\nIf you ''Proceed'', we will discard the last %d ttl timestamps.\nIf you ''Check manually'', we''ll enter debug mode. \n(Hint: Normally you can just proceed)', nr_dropped_frames_id, nr_dropped_frames, d_drop_frames, d_drop_frames),...
             'Problem identifying dropped frames. Proceed?',...
               'Proceed','Check manually','Check manually');
         if matches(answer, 'Proceed')
             inds_dropped_frames = [ inds_dropped_frames_id + 1;...
                                     ( length(camflirTimeStamps_all)-d_drop_frames+1:length(camflirTimeStamps_all) )' ];
+            fprintf('All dropped frames minus %d were identified using frame IDs; the %d unidentified dropped frames are assumed to be dropped at the end of the acquisition. We proceed.\n\n', d_drop_frames, d_drop_frames)
         else
             % Pause execution of program in debug mode, to check what is
             % going on
@@ -331,5 +350,5 @@ fprintf(' .mat file has been updated: %s \n\n', fullfile(path_data, filename_dat
 
 %% get_frameID_from_frames_via_OCR__script
 
-get_frameID_from_frames_via_OCR__script.m
+% get_frameID_from_frames_via_OCR__script.m
 
