@@ -1,7 +1,10 @@
 
-
+clear
 
 folder_root = 'Y:\Users\ariadna\ephys\h-tester-align-data\h-tester_micLn9\2024-03-22';
+% folder_root = 'Y:\Users\ariadna\ephys\h-tester-align-data\h-test_mic9_\2024-03-18';
+% folder_root = 'Y:\Users\ariadna\ephys\h-tester-align-data\h-test_ttlcam_rest\2024-03-18';
+% folder_root = 'Y:\Users\ariadna\ephys\h-tester-align-data\h-test_ttlcam\2024-03-18';
 
 %% Load data.mat file
 
@@ -16,6 +19,7 @@ fmt = '.flac';
 % fmt = '.mic'; % binary file
 
 ls_mic = dir([folder_root filesep '*_audiorec' fmt]);
+% ls_mic = dir([folder_root filesep '*_TTLcam' fmt]);
 if length(ls_mic) == 1
     path_mic = ls_mic(1).folder;
     filename_mic = ls_mic(1).name;
@@ -29,7 +33,7 @@ if strcmp(fmt, '.mic')
     % Read all data from the audio file in a matrix
     nAudioChannels_input_toSave = 4;
     % Read the whole data matrix:
-    % y = fread(fid,[nAudioChannels_input_toSave Inf],'single=>single')';
+    y = fread(fid,[nAudioChannels_input_toSave Inf],'single=>single')';
     % n_Samps = size(y,1);
     % Just get the nr. data points from the filesize:
     fseek(fid, 0, 'eof');
@@ -37,7 +41,7 @@ if strcmp(fmt, '.mic')
     n_Samps = filesize/ 4 / nAudioChannels_input_toSave; % single precision takes 4 bytes per value
     % Close the file
     fclose(fid);
-    % Fs = 192000;
+    Fs_mic = 192000;
 else
     [y,Fs_mic] = audioread(fullfile(path_mic,filename_mic));
     n_Samps = length(y);
@@ -48,9 +52,13 @@ data_mic = y(:,1);
 
 %% Get timestamps of microphone audio data (PTB clock)
 
-
-MicNrSamples  = D.audio_rec.MicNrSamples;
-MicTimeStamps = D.audio_rec.MicTimeStamps;
+if contains(filename_mic, 'audiorec')
+    MicNrSamples  = D.audio_rec.MicNrSamples;
+    MicTimeStamps = D.audio_rec.MicTimeStamps;
+elseif contains(filename_mic, 'TTLcam')
+    MicNrSamples  = D.audio_rec.ttl.MicNrSamples;
+    MicTimeStamps = D.audio_rec.ttl.MicTimeStamps;
+end
 MicSamps_all = [1 : n_Samps]';
 % % MicSamps = cumsum(MicNrSamples) - MicNrSamples(1) + 1;
 % Now, MicTimeStamps gives you the timestamps (according to Behavior PC
@@ -59,6 +67,7 @@ MicSamps_all = [1 : n_Samps]';
 
 % % MicSamps = [1; cumsum(MicNrSamples(1:end-1)) + 1];
 % % T_all = interp1(MicSamps, MicTimeStamps, MicSamps_all, 'linear', 'extrap');
+
 
 tCaptureStart = MicTimeStamps(1);
 % T_all = (MicSamps_all-1) / Fs_mic;
@@ -113,6 +122,10 @@ end
 D.audio_rec.ttl_ephys.TimeStamps = ttlEphysTimeStamps;
 D.audio_rec.ttl_ephys.MicSamples = MicSamples;
     
+figure
+k = 1000;
+inds_toPlot = MicSamples+[-k:k];
+plot(inds_toPlot, ttl_eph(inds_toPlot))
 
 %% Load ephys data 
 
@@ -125,7 +138,9 @@ D.audio_rec.ttl_ephys.MicSamples = MicSamples;
 
 %%% Use directly the ephys data .bin file %%%%%%%%
 
-ephysdata_binfile = "Y:\Users\ariadna\ephys\h-tester-align-data\h-tester_micLn9\2024-03-22\HSW_2024_03_22__16_41_25__01min_06sec__hsamp_64ch_25000sps.bin";
+% ephysdata_binfile = "Y:\Users\ariadna\ephys\h-tester-align-data\h-tester_micLn9\2024-03-22\HSW_2024_03_22__16_41_25__01min_06sec__hsamp_64ch_25000sps.bin";
+ephysdata_binfile_ls = dir([folder_root filesep '*sps.bin']);
+ephysdata_binfile    = fullfile(ephysdata_binfile_ls.folder, ephysdata_binfile_ls.name);
 
 sr_str = char(regexp(ephysdata_binfile,'_\d{4,5}sps', 'match'));
 sr = str2double(sr_str(2:strfind(sr_str,'sps')-1));
@@ -134,10 +149,11 @@ Fs_ephys = sr;
 ch_str = char(regexp(ephysdata_binfile,'_\d{1,4}ch_', 'match'));
 n_channels = str2double(ch_str(2:strfind(ch_str,'ch')-1));
 
-fid = fopen(bin_file, 'r');
+fid = fopen(ephysdata_binfile, 'r');
 fseek(fid, 8, 'bof'); % Skip the first 8 bytes
 yephys = fread(fid,[n_channels Inf],'int16=>double')';
 fclose(fid);
+fprintf('Ephys data .bin file loaded!\n')
 % Convert values to microvolts:
 yephys = int16(yephys*6.25e3/32768);
 
@@ -167,23 +183,35 @@ trange_ephys_ptb  = trange_ephys + ttlEphysTimeStamps;
 %%
 
 figure
-plot(tvec_ephys, data_ephys)
-xlabel('Time (s, ephys clock)')
-xlim(trange_ephys)
-
-figure
-plot(sampvec_ephys, data_ephys)
+p = plot(sampvec_ephys, data_ephys);
+p.DataTipTemplate.DataTipRows(1).Format = '%d'; % set precision of any datatip you add to 1 unit (by default it could be 5 units)
+ylabel('Ephys trace')
 xlabel('Samples (ephys samps)')
 xlim(trange_ephys_samp)
 
 figure
+plot(tvec_ephys, data_ephys)
+ylabel('Ephys trace')
+xlabel('Time (s, ephys clock)')
+xlim(trange_ephys)
+
+figure
 plot(tvec_ephys_ptb, data_ephys)
+ylabel('Ephys trace')
 xlabel('Time (s, ptb clock)')
 xlim(trange_ephys_ptb)
+
+fprintf('\nUse the plot with Ephys data as a function of Samples to choose one sample point as you like.\n') 
+fprintf('The same point will be found in the behavior data stream (mic or ttlcam) and used for checking alignment.')
+fprintf('Enter the sample number (x value) of this point in the variable ''ev_samp''\n\n');
 
 %%
 
 ev_samp   = 662791;
+ev_samp   = 1563899;
+% ev_samp   = 405482;
+% ev_samp   = 139705;
+% ev_samp   = 230350;
 ev_tephys = tvec_ephys(ev_samp);
 ev_tptb   = tvec_ephys_ptb(ev_samp);
 
@@ -210,19 +238,25 @@ trange_mic_ptb = T_all(trange_mic_samp);
 
 figure
 plot(T_all, data_mic);
-ylabel('Mic data')
+ylabel('Behavior data (mic or ttlcam)')
 xlabel('Time (s, ptb clock)')
 xlim(trange_mic_ptb)
 
 figure
-plot(MicSamps_all, data_mic)
-ylabel('Mic data')
-xlabel('Samples (mic samps)')
+p = plot(MicSamps_all, data_mic);
+ylabel('Behavior data (mic or ttlcam)')
+xlabel('Samples (samps)')
 xlim(trange_mic_samp)
+p.DataTipTemplate.DataTipRows(1).Format = '%d'; % set precision of any datatip you add to 1 unit (by default it could be 5 units)
+
+fprintf('\nUse the plot with Behavior data as a function of Samples to find the same point you chose before.\n') 
+fprintf('Enter the sample number (x value) of this point in the variable ''ev_mic_samp''\n\n');
 
 %%
 
-ev_mic_samp = 7998180;
+ev_mic_samp = 7998175;
+ev_mic_samp = 14918705;
+% ev_mic_samp = 4804690;
 ev_mic_tptb = T_all(ev_mic_samp);
 
 ev_dt = ev_tptb - ev_mic_tptb;
