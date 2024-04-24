@@ -1,10 +1,11 @@
 
 clear
 
-folder_root = 'Y:\Users\ariadna\ephys\h-tester-align-data\h-tester_micLn9\2024-03-22';
+% folder_root = 'Y:\Users\ariadna\ephys\h-tester-align-data\h-tester_micLn9\2024-03-22';
 % folder_root = 'Y:\Users\ariadna\ephys\h-tester-align-data\h-test_mic9_\2024-03-18';
 % folder_root = 'Y:\Users\ariadna\ephys\h-tester-align-data\h-test_ttlcam_rest\2024-03-18';
 % folder_root = 'Y:\Users\ariadna\ephys\h-tester-align-data\h-test_ttlcam\2024-03-18';
+folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\trial02';
 
 %% Load data.mat file
 
@@ -127,6 +128,11 @@ k = 1000;
 inds_toPlot = MicSamples+[-k:k];
 plot(inds_toPlot, ttl_eph(inds_toPlot))
 
+% Pulse duration (manually enter the sample nr of the offset):
+samp_offset = 33255;
+ttlpulse_dur = abs(samp - samp_offset)/D.audio_rec.ttl_ephys.SampleRate;
+fprintf('ttlpulse_dur = %5.4f msec\n\n', ttlpulse_dur*1000);
+
 %% Load ephys data 
 
 %%% The original ephys data .bin file was separately saved into .mat file
@@ -151,11 +157,15 @@ n_channels = str2double(ch_str(2:strfind(ch_str,'ch')-1));
 
 fid = fopen(ephysdata_binfile, 'r');
 fseek(fid, 8, 'bof'); % Skip the first 8 bytes
-yephys = fread(fid,[n_channels Inf],'int16=>double')';
+% t = fread(fid,1,'uint64=>uint64'); % read timestamp from start of file
+yephys = fread(fid,[n_channels Inf],'int16=>single')';
 fclose(fid);
 fprintf('Ephys data .bin file loaded!\n')
 % Convert values to microvolts:
-yephys = int16(yephys*6.25e3/32768);
+yephys = yephys*6.25e3/32768;
+% To save memory, you can also convert to int16 (2 bytes per digit, vs 4
+% bytes for single and 8 for double):
+% yephys = int16(yephys);
 
 % figure;
 % hold on;
@@ -172,10 +182,13 @@ sampvec_ephys  = [1 : length(data_ephys)]';
 tvec_ephys     = [sampvec_ephys-1] / Fs_ephys;
 tvec_ephys_ptb = tvec_ephys + ttlEphysTimeStamps;
 
+figure;
+plot(tvec_ephys, data_ephys)
 
 %%
 
 trange_ephys = [26.5 26.57];
+trange_ephys = [296.05 296.1];
 trange_ephys_samp = trange_ephys * Fs_ephys;
 trange_ephys_ptb  = trange_ephys + ttlEphysTimeStamps;
 
@@ -202,7 +215,7 @@ xlabel('Time (s, ptb clock)')
 xlim(trange_ephys_ptb)
 
 fprintf('\nUse the plot with Ephys data as a function of Samples to choose one sample point as you like.\n') 
-fprintf('The same point will be found in the behavior data stream (mic or ttlcam) and used for checking alignment.')
+fprintf('The same point will be found in the behavior data stream (mic or ttlcam) and used for checking alignment.\n')
 fprintf('Enter the sample number (x value) of this point in the variable ''ev_samp''\n\n');
 
 %%
@@ -212,6 +225,7 @@ ev_samp   = 1563899;
 % ev_samp   = 405482;
 % ev_samp   = 139705;
 % ev_samp   = 230350;
+ev_samp   = 7401544;
 ev_tephys = tvec_ephys(ev_samp);
 ev_tptb   = tvec_ephys_ptb(ev_samp);
 
@@ -257,12 +271,10 @@ fprintf('Enter the sample number (x value) of this point in the variable ''ev_mi
 ev_mic_samp = 7998175;
 ev_mic_samp = 14918705;
 % ev_mic_samp = 4804690;
+ev_mic_samp = 60146464;
 ev_mic_tptb = T_all(ev_mic_samp);
 
 ev_dt = ev_tptb - ev_mic_tptb;
-fprintf('dt_ev = %5.4f msec\n\n', ev_dt*1000);
+fprintf('Misalignment: ev_dt = %5.4f msec\n\n', ev_dt*1000);
 
-%%
-ttlpulse_dur = abs(29102 - 29296)/D.audio_rec.ttl_ephys.SampleRate;
-fprintf('ttlpulse_dur = %5.4f msec\n\n', ttlpulse_dur*1000);
 
