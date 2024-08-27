@@ -1,4 +1,6 @@
 
+% Place behavior and ephys files in the same folder 'folder_root'
+
 clear
 
 % folder_root = 'Y:\Users\ariadna\ephys\h-tester-align-data\h-tester_micLn9\2024-03-22';
@@ -7,9 +9,18 @@ clear
 % folder_root = 'Y:\Users\ariadna\ephys\h-tester-align-data\h-test_ttlcam\2024-03-18';
 % folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\trial03';
 % folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-25';
-folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-26\trial001'; % Misalignment: ev_dt = -2.1617 msec
+% folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-26\trial001'; % Misalignment: ev_dt = -2.1617 msec
 % folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-26\trial002'; % Misalignment: ev_dt = -2.1308 msec
 % folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-26\trial003'; % Misalignment: ev_dt = -2.1931 msec
+% folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-29\trial001'; % Misalignment: ev_dt = -2.1573 msec
+% folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-29\trial002';
+% folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-30\trial002';
+% folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-30\trial003';
+folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-30\trial004_buf512';  % Misalignment: ev_dt = -2.1725 msec
+folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-30\trial005_buf8192'; % Misalignment: ev_dt = -1.0617 msec
+folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-30\trial006_buf128';  % Misalignment: ev_dt = 0.2756 msec
+% folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-30\trial007_buf128';  % Misalignment: ev_dt = ~-1.5 msec
+
 
 
 %% Load data.mat file
@@ -22,7 +33,7 @@ D = load( fullfile(datamat_ls.folder, datamat_ls.name));
 
 % fmt = '.wav';
 fmt = '.flac';
-% fmt = '.mic'; % binary file
+fmt = '.mic'; % binary file
 
 ls_mic = dir([folder_root filesep '*_audiorec' fmt]);
 % ls_mic = dir([folder_root filesep '*_TTLcam' fmt]);
@@ -58,26 +69,31 @@ data_mic = y(:,1);
 
 %% Get timestamps of microphone audio data (PTB clock)
 
-if contains(filename_mic, 'audiorec')
-    MicNrSamples  = D.audio_rec.MicNrSamples;
-    MicTimeStamps = D.audio_rec.MicTimeStamps;
-elseif contains(filename_mic, 'TTLcam')
-    MicNrSamples  = D.audio_rec.ttl.MicNrSamples;
-    MicTimeStamps = D.audio_rec.ttl.MicTimeStamps;
-end
 MicSamps_all = [1 : n_Samps]';
+
+
+% if contains(filename_mic, 'audiorec')
+%     MicNrSamples  = D.audio_rec.MicNrSamples;
+%     MicTimeStamps = D.audio_rec.MicTimeStamps;
+% elseif contains(filename_mic, 'TTLcam')
+%     MicNrSamples  = D.audio_rec.ttl.MicNrSamples;
+%     MicTimeStamps = D.audio_rec.ttl.MicTimeStamps;
+% end
+% tCaptureStart = MicTimeStamps(1);
+% T_all = (MicSamps_all-1) / Fs_mic + tCaptureStart;
+
+
 % % MicSamps = cumsum(MicNrSamples) - MicNrSamples(1) + 1;
 % Now, MicTimeStamps gives you the timestamps (according to Behavior PC
 % clock) corresponding to the audio file samples indicated in MicSamps.
 % % T_all = interp1(MicSamps, MicTimeStamps, MicSamps_all, 'linear', 'extrap');
 
+
 % MicSamps = [1; cumsum(MicNrSamples(1:end-1)) + 1];
 % T_all = interp1(MicSamps, MicTimeStamps, MicSamps_all, 'linear', 'extrap');
 
 
-tCaptureStart = MicTimeStamps(1);
 T_all = (MicSamps_all-1) / Fs_mic;
-% T_all = (MicSamps_all-1) / Fs_mic + tCaptureStart;
 
 %% Load TTL ephys and get timestamp 
 
@@ -169,8 +185,8 @@ switch ttl_ephys_type
         % MicTimeStamps  = D.audio_rec.ttl_ephys.MicTimeStamps;
         % MicNrSamples   = D.audio_rec.ttl_ephys.MicNrSamples;
         %%% If ephys TTL is fed to one of the four mic channels:
-            MicTimeStamps = D.audio_rec.MicTimeStamps;
-            MicNrSamples  = D.audio_rec.MicNrSamples;
+        % MicTimeStamps = D.audio_rec.MicTimeStamps;
+        % MicNrSamples  = D.audio_rec.MicNrSamples;
         %%%
         ttlEphysTimeStamps = nan(nr_detectedPulses,1);
         for f = 1 : nr_detectedPulses
@@ -182,17 +198,19 @@ end
 
 
 figure
-k = Fs/2; % 1000;
+k = Fs/4; % 1000;
 inds_toPlot = MicSamples+[-k:k];
 p = plot(inds_toPlot, ttl_eph(inds_toPlot));
 p.DataTipTemplate.DataTipRows(1).Format = '%d'; % set precision of any datatip you add to 1 unit (by default it could be 5 units)
 
 % Find TTL ephys offset, so to calculate pulse duration:
-[~,locs_down2] = findpeaks(-ttl_eph, "MinPeakDistance",Fs/min_dist,...
-    "MinPeakProminence",dval_min, "MinPeakHeight",val_min); 
-samp_offset = locs_down2(1);
+[~,locs_down2] = findpeaks(-ttl_eph(samp:samp+2*Fs), "MinPeakDistance",Fs/min_dist,...
+    "MinPeakProminence",dval_min, "MinPeakHeight",val_min*0.7); 
+samp_offset = locs_down2(1)+samp-1;
 % % Pulse duration (manually enter the sample nr of the offset):
 % samp_offset = 3843411;
+hold on;
+plot([samp samp_offset], [ttl_eph(samp) ttl_eph(samp_offset)], 'v');
 
 ttlpulse_dur = abs(samp - samp_offset)/Fs;
 fprintf('ttlpulse_dur = %5.4f msec\n\n', ttlpulse_dur*1000);
@@ -255,9 +273,8 @@ xlabel('Time (s, ephys clock)')
 trange_ephys = [26.5 26.57];
 trange_ephys = [0.05 0.1];
 trange_ephys = [56.23 56.25];
-trange_ephys = [59.46 59.49];
-% trange_ephys = [55.25 55.4];
-% trange_ephys = [9.9 10];
+trange_ephys = [5.9 6];
+
 trange_ephys_samp = trange_ephys * Fs_ephys;
 trange_ephys_ptb  = trange_ephys + ttlEphysTimeStamps;
 
@@ -297,7 +314,8 @@ fprintf('Enter the sample number (x value) of this point in the variable ''ev_sa
 % ev_samp   = 405482;
 % ev_samp   = 139705;
 % ev_samp   = 230350;
-ev_samp   = 1486723;
+ev_samp   = 148727;
+
 ev_tephys = tvec_ephys(ev_samp);
 ev_tptb   = tvec_ephys_ptb(ev_samp);
 
@@ -343,7 +361,8 @@ fprintf('Enter the sample number (x value) of this point in the variable ''ev_mi
 
 ev_mic_samp = 7998175;
 ev_mic_samp = 14918705;
-ev_mic_samp = 15242625;
+ev_mic_samp = 3175352;
+
 ev_mic_tptb = T_all(ev_mic_samp);
 
 ev_dt = ev_tptb - ev_mic_tptb;
@@ -359,13 +378,15 @@ MicSamps_all = [1 : n_Samps]';
 tvec_mic = (MicSamps_all-1) / Fs_mic;
 
 % Get range of data_mic to rescale ephys later on:
-lims = prctile(data_mic, [1 99]);
+lims = prctile(data_mic, [0.1 99.9]);
 lims = [-max(abs(lims)) max(abs(lims))];
 
 figure;
 hold on
-plot(tvec_mic, data_mic)
-plot(tvec_mic, ttl_eph)
+p1 = plot(tvec_mic, data_mic);
+% plot(tvec_mic, ttl_eph)
+p1.DataTipTemplate.DataTipRows(1).Format = '%.5f'; % set precision of any datatip
+
 
 data_ephys      = yephys(:,1);
 % Rescale ephys data:
@@ -378,8 +399,12 @@ sampvec_ephys  = [1 : length(data_ephys)]';
 tvec_ephys     = [sampvec_ephys-1] / Fs_ephys;
 tvec_ephys2mic = tvec_ephys + ttlEphysTimeStamps;
 
-plot([ttlEphysTimeStamps ttlEphysTimeStamps],[-1 1]*lims(2),'k--')
-plot(tvec_ephys2mic, data_ephys_norm)
+plot([ttlEphysTimeStamps ttlEphysTimeStamps],[-1 1]*lims(2)*10,'k--')
+p2 = plot(tvec_ephys2mic, data_ephys_norm);
 
-ylim(lims)
+p2.DataTipTemplate.DataTipRows(1).Format = '%.5f'; % set precision of any datatip
+
+% ylim(lims)
+ylim(lims*2)
+
 
