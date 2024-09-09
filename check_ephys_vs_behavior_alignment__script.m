@@ -20,6 +20,9 @@ folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04
 folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-30\trial005_buf8192'; % Misalignment: ev_dt = -1.0617 msec
 folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-30\trial006_buf128';  % Misalignment: ev_dt = 0.2756 msec
 % folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-30\trial007_buf128';  % Misalignment: ev_dt = ~-1.5 msec
+%
+folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-04';  % Misalignment: ev_dt = 
+folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-06';  % Misalignment: ev_dt = 
 
 
 
@@ -33,7 +36,7 @@ D = load( fullfile(datamat_ls.folder, datamat_ls.name));
 
 % fmt = '.wav';
 fmt = '.flac';
-fmt = '.mic'; % binary file
+% fmt = '.mic'; % binary file
 
 ls_mic = dir([folder_root filesep '*_audiorec' fmt]);
 % ls_mic = dir([folder_root filesep '*_TTLcam' fmt]);
@@ -72,20 +75,20 @@ data_mic = y(:,1);
 MicSamps_all = [1 : n_Samps]';
 
 
-% if contains(filename_mic, 'audiorec')
-%     MicNrSamples  = D.audio_rec.MicNrSamples;
-%     MicTimeStamps = D.audio_rec.MicTimeStamps;
-% elseif contains(filename_mic, 'TTLcam')
-%     MicNrSamples  = D.audio_rec.ttl.MicNrSamples;
-%     MicTimeStamps = D.audio_rec.ttl.MicTimeStamps;
-% end
-% tCaptureStart = MicTimeStamps(1);
-% T_all = (MicSamps_all-1) / Fs_mic + tCaptureStart;
+if contains(filename_mic, 'audiorec')
+    MicNrSamples  = D.audio_rec.MicNrSamples;
+    MicTimeStamps = D.audio_rec.MicTimeStamps;
+elseif contains(filename_mic, 'TTLcam')
+    MicNrSamples  = D.audio_rec.ttl.MicNrSamples;
+    MicTimeStamps = D.audio_rec.ttl.MicTimeStamps;
+end
+tCaptureStart = MicTimeStamps(1);
+T_all = (MicSamps_all-1) / Fs_mic + tCaptureStart;
 
 
 % % MicSamps = cumsum(MicNrSamples) - MicNrSamples(1) + 1;
-% Now, MicTimeStamps gives you the timestamps (according to Behavior PC
-% clock) corresponding to the audio file samples indicated in MicSamps.
+% % % Now, MicTimeStamps gives you the timestamps (according to Behavior PC
+% % % clock) corresponding to the audio file samples indicated in MicSamps.
 % % T_all = interp1(MicSamps, MicTimeStamps, MicSamps_all, 'linear', 'extrap');
 
 
@@ -93,13 +96,13 @@ MicSamps_all = [1 : n_Samps]';
 % T_all = interp1(MicSamps, MicTimeStamps, MicSamps_all, 'linear', 'extrap');
 
 
-T_all = (MicSamps_all-1) / Fs_mic;
+% T_all = (MicSamps_all-1) / Fs_mic;
 
 %% Load TTL ephys and get timestamp 
 
 
-%     ttl_ephys_type = 'dedicated';
-    ttl_ephys_type = 'mic';
+    ttl_ephys_type = 'dedicated'; % _TTLephys.flac
+    % ttl_ephys_type = 'mic';
 
 switch ttl_ephys_type
     case 'dedicated'
@@ -142,15 +145,16 @@ switch ttl_ephys_type
         MicTimeStamps  = D.audio_rec.ttl_ephys.MicTimeStamps;
         MicNrSamples   = D.audio_rec.ttl_ephys.MicNrSamples;
         %%% If ephys TTL is fed to one of the four mic channels:
-            MicTimeStamps = D.audio_rec.MicTimeStamps;
-            MicNrSamples  = D.audio_rec.MicNrSamples;
+            % MicTimeStamps = D.audio_rec.MicTimeStamps;
+            % MicNrSamples  = D.audio_rec.MicNrSamples;
         %%%
         ttlEphysTimeStamps = nan(nr_detectedPulses,1);
         for f = 1 : nr_detectedPulses
             samp = locs_down(f); % frame onset in sound card samples
-            ind_MicNrSamples = find( (samp - MicNrSamples)> 0, 1,"first");
-            d_samps = samp - MicNrSamples(ind_MicNrSamples);
-            ttlEphysTimeStamps(f) = MicTimeStamps(ind_MicNrSamples) + d_samps/D.audio_rec.ttl_ephys.SampleRate;
+            % ind_MicNrSamples = find( (samp - MicNrSamples)> 0, 1,"first");
+            % d_samps = samp - MicNrSamples(ind_MicNrSamples);
+            % ttlEphysTimeStamps(f) = MicTimeStamps(ind_MicNrSamples) + d_samps/D.audio_rec.ttl_ephys.SampleRate;
+            ttlEphysTimeStamps(f) = MicTimeStamps(1) + (samp-1)/D.audio_rec.ttl_ephys.SampleRate;
         end
         D.audio_rec.ttl_ephys.TimeStamps = ttlEphysTimeStamps;
         D.audio_rec.ttl_ephys.MicSamples = MicSamples;
@@ -270,10 +274,10 @@ xlabel('Time (s, ephys clock)')
 
 %%
 
-trange_ephys = [26.5 26.57];
+% trange_ephys = [26.5 26.57];
 trange_ephys = [0.05 0.1];
-trange_ephys = [56.23 56.25];
-trange_ephys = [5.9 6];
+% trange_ephys = [56.23 56.25];
+trange_ephys = [45.6 45.8];
 
 trange_ephys_samp = trange_ephys * Fs_ephys;
 trange_ephys_ptb  = trange_ephys + ttlEphysTimeStamps;
@@ -314,7 +318,7 @@ fprintf('Enter the sample number (x value) of this point in the variable ''ev_sa
 % ev_samp   = 405482;
 % ev_samp   = 139705;
 % ev_samp   = 230350;
-ev_samp   = 148727;
+ev_samp   = 1141790;
 
 ev_tephys = tvec_ephys(ev_samp);
 ev_tptb   = tvec_ephys_ptb(ev_samp);
@@ -361,7 +365,7 @@ fprintf('Enter the sample number (x value) of this point in the variable ''ev_mi
 
 ev_mic_samp = 7998175;
 ev_mic_samp = 14918705;
-ev_mic_samp = 3175352;
+ev_mic_samp = 13150604;
 
 ev_mic_tptb = T_all(ev_mic_samp);
 
@@ -371,40 +375,58 @@ fprintf('Misalignment: ev_dt = %5.4f msec\n\n', ev_dt*1000);
 
 %% Plot everything together
 
-data_mic = y(:,1);
-ttl_eph  = y(:,2);
-
-MicSamps_all = [1 : n_Samps]';
-tvec_mic = (MicSamps_all-1) / Fs_mic;
-
-% Get range of data_mic to rescale ephys later on:
-lims = prctile(data_mic, [0.1 99.9]);
-lims = [-max(abs(lims)) max(abs(lims))];
 
 figure;
 hold on
-p1 = plot(tvec_mic, data_mic);
-% plot(tvec_mic, ttl_eph)
-p1.DataTipTemplate.DataTipRows(1).Format = '%.5f'; % set precision of any datatip
+% Mic data with test ephys data 
+m1 = prctile(data_mic,99);
+p = plot(T_all, data_mic/m1);
+p.DataTipTemplate.DataTipRows(1).Format = '%.4f'; % set precision of any datatip you add to 1 unit (by default it could be 5 units)
+% Test ephys data 
+m2 = prctile(data_ephys,99);
+plot(tvec_ephys_ptb, data_ephys/m2)
+% Ephys TTL pulse
+MicTimeStamps  = D.audio_rec.ttl_ephys.MicTimeStamps;
+MicNrSamples   = D.audio_rec.ttl_ephys.MicNrSamples;
+tCaptureStart2 = MicTimeStamps(1);
+T_ttl_all = ([1 : length(ttl_eph)]'-1) / D.audio_rec.ttl_ephys.SampleRate + tCaptureStart2;
+plot(T_ttl_all, ttl_eph)
 
 
-data_ephys      = yephys(:,1);
-% Rescale ephys data:
-lims_ephys = prctile(data_ephys, [1 99]);
-% lims_ephys = [min(data_ephys), max(data_ephys)];
-data_ephys_norm = (data_ephys - lims_ephys(1)) / (lims_ephys(2)-lims_ephys(1)) * 2 - 1;
-data_ephys_norm = data_ephys_norm * lims(2);
-
-sampvec_ephys  = [1 : length(data_ephys)]';
-tvec_ephys     = [sampvec_ephys-1] / Fs_ephys;
-tvec_ephys2mic = tvec_ephys + ttlEphysTimeStamps;
-
-plot([ttlEphysTimeStamps ttlEphysTimeStamps],[-1 1]*lims(2)*10,'k--')
-p2 = plot(tvec_ephys2mic, data_ephys_norm);
-
-p2.DataTipTemplate.DataTipRows(1).Format = '%.5f'; % set precision of any datatip
-
-% ylim(lims)
-ylim(lims*2)
+% % data_mic = y(:,1);
+% % % ttl_eph  = y(:,2);
+% % 
+% % MicSamps_all = [1 : n_Samps]';
+% % tvec_mic = (MicSamps_all-1) / Fs_mic;
+% % 
+% % % Get range of data_mic to rescale ephys later on:
+% % lims = prctile(data_mic, [0.1 99.9]);
+% % lims = [-max(abs(lims)) max(abs(lims))];
+% % 
+% % figure;
+% % hold on
+% % p1 = plot(tvec_mic, data_mic);
+% % % plot(tvec_mic, ttl_eph)
+% % p1.DataTipTemplate.DataTipRows(1).Format = '%.5f'; % set precision of any datatip
+% % 
+% % 
+% % data_ephys      = yephys(:,1);
+% % % Rescale ephys data:
+% % lims_ephys = prctile(data_ephys, [1 99]);
+% % % lims_ephys = [min(data_ephys), max(data_ephys)];
+% % data_ephys_norm = (data_ephys - lims_ephys(1)) / (lims_ephys(2)-lims_ephys(1)) * 2 - 1;
+% % data_ephys_norm = data_ephys_norm * lims(2);
+% % 
+% % sampvec_ephys  = [1 : length(data_ephys)]';
+% % tvec_ephys     = [sampvec_ephys-1] / Fs_ephys;
+% % tvec_ephys2mic = tvec_ephys + ttlEphysTimeStamps;
+% % 
+% % plot([ttlEphysTimeStamps ttlEphysTimeStamps],[-1 1]*lims(2)*10,'k--')
+% % p2 = plot(tvec_ephys2mic, data_ephys_norm);
+% % 
+% % p2.DataTipTemplate.DataTipRows(1).Format = '%.5f'; % set precision of any datatip
+% % 
+% % % ylim(lims)
+% % ylim(lims*2)
 
 
