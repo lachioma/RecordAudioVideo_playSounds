@@ -430,3 +430,38 @@ plot(T_ttl_all, ttl_eph)
 % % ylim(lims*2)
 
 
+%% data_ephys = yephys(:,1);
+
+tvec_ephys_ptb;
+
+%% Plot sound evoked responses
+
+sound_trange = [-0.5 0.5];
+for s = 1 : length(D.sounds.soundTimeStamps)
+
+    sound_ts = D.sounds.soundTimeStamps{s}(1);
+    
+    
+    sound_interval = sound_ts + sound_trange;
+    snd_inds = tvec_ephys_ptb >= sound_interval(1) & tvec_ephys_ptb <= sound_interval(2);
+    
+    %%
+    ch = 1;
+    ch = 1:64;
+    data_ephys_toPlot = yephys(snd_inds,ch);
+    data_ephys_toPlot = mean(data_ephys_toPlot,2);
+
+    tvec_sound = linspace(sound_trange(1),sound_trange(2),sum(snd_inds));
+    n_channels = size(data_ephys_toPlot,2);
+    
+    % data_ephys_toPlot = zscore(data_ephys_toPlot, 0,1);
+    % data_ephys_toPlot = data_ephys_toPlot ./ repmat(max(data_ephys_toPlot,[],1), size(data_ephys_toPlot,1),1);
+    
+    figure;
+    hold on;
+    % imagesc( tvec_sound, 1:n_channels, data_ephys_toPlot' )
+    plot( tvec_sound, data_ephys_toPlot' )
+    plot( [0 0], [0.5 n_channels+0.5], 'k')
+    axis tight
+
+end
