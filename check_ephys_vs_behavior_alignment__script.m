@@ -23,7 +23,20 @@ folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04
 %
 folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-04';  % Misalignment: ev_dt = 
 folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-06';  % Misalignment: ev_dt = 
-
+%
+folder_root = 'Y:\Users\ariadna\ephys\m10-ephys\m10_fullBattery\2024-09-12';  % 
+% folder_root = 'Y:\Users\ariadna\ephys\m10-ephys\m10_set\2024-09-12';  % 
+% 
+% 2024-09-30 tests - Sound card buffer at 512 
+folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-30\h-test\2024-09-30\trial01'; % buffer at 512 % Misalignment: ev_dt = 18.8094 msec
+folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-30\h-test\2024-09-30\trial02'; % buffer at 512 % Misalignment: ev_dt = 30.2944 msec
+folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-30\h-test\2024-09-30\trial03'; % buffer at 512 % Misalignment: ev_dt = 31.2556 msec
+% 2024-09-30 tests - Sound card buffer at 4096 or 8192
+folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-30\h-test-highBuffer\2024-09-30\trial01'; % buffer at 4096 % Misalignment: ev_dt = 12.1244 msec
+folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-30\h-test-highBuffer\2024-09-30\trial02'; % buffer at 4096 % Misalignment: ev_dt = 6.1000 msec
+folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-30\h-test-highBuffer\2024-09-30\trial03'; % buffer at 4096 % Misalignment: ev_dt = 10.6523 msec
+% 2024-09-30 tests - Sound card buffer back at 512
+folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-30\h-test-backLowBuffer\2024-09-30'; % buffer at 4096 % Misalignment: ev_dt = 26.6846 msec
 
 
 %% Load data.mat file
@@ -232,6 +245,13 @@ fprintf('ttlpulse_dur = %5.4f msec\n\n', ttlpulse_dur*1000);
 
 % ephysdata_binfile = "Y:\Users\ariadna\ephys\h-tester-align-data\h-tester_micLn9\2024-03-22\HSW_2024_03_22__16_41_25__01min_06sec__hsamp_64ch_25000sps.bin";
 ephysdata_binfile_ls = dir([folder_root filesep '*sps.bin']);
+if length(ephysdata_binfile_ls) > 1
+    warning('Multiple ephys bin files found!');
+    keyboard;
+    ephysdata_binfile_ls = ephysdata_binfile_ls(1);
+elseif length(ephysdata_binfile_ls) < 1
+    error('No ephys bin files found!');
+end
 ephysdata_binfile    = fullfile(ephysdata_binfile_ls.folder, ephysdata_binfile_ls.name);
 
 sr_str = char(regexp(ephysdata_binfile,'_\d{4,5}sps', 'match'));
@@ -241,14 +261,37 @@ Fs_ephys = sr;
 ch_str = char(regexp(ephysdata_binfile,'_\d{1,4}ch_', 'match'));
 n_channels = str2double(ch_str(2:strfind(ch_str,'ch')-1));
 
+
+bytesToSkip = 8; % Skip the first 8 bytes
 fid = fopen(ephysdata_binfile, 'r');
-fseek(fid, 8, 'bof'); % Skip the first 8 bytes
+
+fseek(fid, 0, 'eof');  % Move to the end of the file
+fileSize_bytes  = ftell(fid);  % Get the current position, which is the size in bytes
+fileSize_Gbytes = fileSize_bytes/10^9;
+n_bytes_perInt16 = 2;
+n_data_points = (fileSize_bytes - bytesToSkip)/n_channels/n_bytes_perInt16;
+assert(mod(n_data_points,1)==0, 'The number of data points has decimals, so something is wrong.')
+
+fseek(fid, bytesToSkip, 'bof'); % Skip the first 8 bytes
 % t = fread(fid,1,'uint64=>uint64'); % read timestamp from start of file
-yephys = fread(fid,[n_channels Inf],'int16=>single')';
+
+% n_channels_toRead = 5; % Load only the first 'n_channels_toRead' channels
+n_channels_toRead = n_channels; % Load all channels
+
+if fileSize_Gbytes > 10 && n_channels_toRead > 30
+    warning('Are you sure you want to proceed? This might take long to load and even result in out of memory.')
+    n_channels_toRead = 1;
+    keyboard;
+end
+
+yephys = fread(fid,[n_channels_toRead n_data_points],'int16=>single', n_bytes_perInt16*(n_channels-n_channels_toRead))';
+% yephys = fread(fid,[n_channels Inf],'int16=>single')';
+
 fclose(fid);
 fprintf('Ephys data .bin file loaded!\n')
 % Convert values to microvolts:
 yephys = yephys*6.25e3/32768;
+
 % To save memory, you can also convert to int16 (2 bytes per digit, vs 4
 % bytes for single and 8 for double):
 % yephys = int16(yephys);
@@ -272,12 +315,14 @@ plot(tvec_ephys, data_ephys)
 ylabel('Ephys trace')
 xlabel('Time (s, ephys clock)')
 
+
 %%
 
 % trange_ephys = [26.5 26.57];
 trange_ephys = [0.05 0.1];
 % trange_ephys = [56.23 56.25];
-trange_ephys = [45.6 45.8];
+trange_ephys = [15.1 15.3];
+trange_ephys = [33.2 33.3];
 
 trange_ephys_samp = trange_ephys * Fs_ephys;
 trange_ephys_ptb  = trange_ephys + ttlEphysTimeStamps;
@@ -313,12 +358,12 @@ fprintf('Enter the sample number (x value) of this point in the variable ''ev_sa
 
 %%
 
-% ev_samp   = 662791;
-% ev_samp   = 1563899;
-% ev_samp   = 405482;
-% ev_samp   = 139705;
-% ev_samp   = 230350;
-ev_samp   = 1141790;
+% ev_samp   = 190790;
+ev_samp   = 284232;
+ev_samp   = 378942;
+ev_samp   = 640766;
+ev_samp   = 1064094;
+ev_samp   = 831759;
 
 ev_tephys = tvec_ephys(ev_samp);
 ev_tptb   = tvec_ephys_ptb(ev_samp);
@@ -363,9 +408,13 @@ fprintf('Enter the sample number (x value) of this point in the variable ''ev_mi
 
 %% Get misalignment between ephys and behavior
 
-ev_mic_samp = 7998175;
-ev_mic_samp = 14918705;
-ev_mic_samp = 13150604;
+ev_mic_samp = 2641716;
+ev_mic_samp = 3855044;
+ev_mic_samp = 4702094;
+ev_mic_samp = 5178640;
+ev_mic_samp = 6532205;
+ev_mic_samp = 10669890;
+ev_mic_samp = 8797079;
 
 ev_mic_tptb = T_all(ev_mic_samp);
 
@@ -391,7 +440,8 @@ MicNrSamples   = D.audio_rec.ttl_ephys.MicNrSamples;
 tCaptureStart2 = MicTimeStamps(1);
 T_ttl_all = ([1 : length(ttl_eph)]'-1) / D.audio_rec.ttl_ephys.SampleRate + tCaptureStart2;
 plot(T_ttl_all, ttl_eph)
-
+title('Run the next section if you want to measure the dT between 2 points!')
+disp('Run the next section if you want to measure the dT between 2 points!')
 
 % % data_mic = y(:,1);
 % % % ttl_eph  = y(:,2);
@@ -429,29 +479,66 @@ plot(T_ttl_all, ttl_eph)
 % % % ylim(lims)
 % % ylim(lims*2)
 
+%% Measure Time between 2 selected points
 
-%% data_ephys = yephys(:,1);
+% Get two points interactively
+[x, y] = ginput(2);
+% Calculate the Euclidean distance between the two points
+% distance = sqrt((x(2) - x(1))^2 + (y(2) - y(1))^2);
+distance = x(2) - x(1);
+% Display the distance
+disp(['Time between the 2 selected points: ', num2str(distance*1000), ' ms']);
 
-tvec_ephys_ptb;
+
+%% Filter the ephys data
+yephys_HPF = highpass(yephys, 300, Fs_ephys);
+yephys_BPF = lowpass(yephys_HPF, 4000, Fs_ephys);
+
+% yephys_BPF = bandpass(yephys, [300 4000], Fs_ephys);
+yephys_HPF = [];
+
+
+% for i = 1:size(yephys_BPF,2)
+%     yephys_rms(i) = rms(yephys_BPF(:,i));
+% end
+
+%% Do a median substraction from channels
+M = median(yephys_BPF, 2);
+yephys_BPF_med = yephys_BPF - repmat(M,1,size(yephys_BPF,2));
+
+yephys_BPF = [];
+
 
 %% Plot sound evoked responses
 
-sound_trange = [-0.5 0.5];
+tvec_ephys_ptb;
+
+sound_trange = [-0.1 0.1];
 for s = 1 : length(D.sounds.soundTimeStamps)
 
-    sound_ts = D.sounds.soundTimeStamps{s}(1);
+    n_trials = length(D.sounds.soundTimeStamps{s});
+    data_ephys_toPlot = [];
+    for tr = 1 : n_trials
+        sound_ts = D.sounds.soundTimeStamps{s}(tr);
     
-    
-    sound_interval = sound_ts + sound_trange;
-    snd_inds = tvec_ephys_ptb >= sound_interval(1) & tvec_ephys_ptb <= sound_interval(2);
-    
-    %%
-    ch = 1;
-    ch = 1:64;
-    data_ephys_toPlot = yephys(snd_inds,ch);
-    data_ephys_toPlot = mean(data_ephys_toPlot,2);
+        sound_interval = sound_ts + sound_trange;
+        snd_inds = tvec_ephys_ptb >= sound_interval(1) & tvec_ephys_ptb <= sound_interval(2);
+        
+        if sum(snd_inds) < 1
+            % warning()
+            break
+        end
+        %%
+        ch = 5;
+        % ch = 1:64;
+        data_ephys_toPlot(:,:,tr) = yephys_BPF_med(snd_inds,ch); %#ok<SAGROW>
+        % Mean across channels
+        data_ephys_toPlot = mean(data_ephys_toPlot,2);
+    end
+    % Mean across trials
+    data_ephys_toPlot = mean(data_ephys_toPlot,3);
 
-    tvec_sound = linspace(sound_trange(1),sound_trange(2),sum(snd_inds));
+    tvec_sound = linspace(sound_trange(1),sound_trange(2), size(data_ephys_toPlot,1));
     n_channels = size(data_ephys_toPlot,2);
     
     % data_ephys_toPlot = zscore(data_ephys_toPlot, 0,1);
