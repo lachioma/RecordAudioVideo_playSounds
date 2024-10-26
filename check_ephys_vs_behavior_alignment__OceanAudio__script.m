@@ -9,50 +9,21 @@
 
 clear
 
-% folder_root = 'Y:\Users\ariadna\ephys\h-tester-align-data\h-tester_micLn9\2024-03-22';
-% folder_root = 'Y:\Users\ariadna\ephys\h-tester-align-data\h-test_mic9_\2024-03-18';
-% folder_root = 'Y:\Users\ariadna\ephys\h-tester-align-data\h-test_ttlcam_rest\2024-03-18';
-% folder_root = 'Y:\Users\ariadna\ephys\h-tester-align-data\h-test_ttlcam\2024-03-18';
-% folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\trial03';
-% folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-25';
-% folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-26\trial001'; % Misalignment: ev_dt = -2.1617 msec
-% folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-26\trial002'; % Misalignment: ev_dt = -2.1308 msec
-% folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-26\trial003'; % Misalignment: ev_dt = -2.1931 msec
-% folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-29\trial001'; % Misalignment: ev_dt = -2.1573 msec
-% folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-29\trial002';
-% folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-30\trial002';
-% folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-30\trial003';
-folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-30\trial004_buf512';  % Misalignment: ev_dt = -2.1725 msec
-folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-30\trial005_buf8192'; % Misalignment: ev_dt = -1.0617 msec
-folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-30\trial006_buf128';  % Misalignment: ev_dt = 0.2756 msec
-% folder_root = 'Z:\Users\Alessandro La Chioma\Ariadna\ale_tmp\smart_mouse\2024-04-30\trial007_buf128';  % Misalignment: ev_dt = ~-1.5 msec
-%
-folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-04';  % Misalignment: ev_dt = 
-folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-06';  % Misalignment: ev_dt = 
-%
-folder_root = 'Y:\Users\ariadna\ephys\m10-ephys\m10_fullBattery\2024-09-12';  % 
-% folder_root = 'Y:\Users\ariadna\ephys\m10-ephys\m10_set\2024-09-12';  % 
-% 
-% 2024-09-30 tests - Sound card buffer at 512 
-folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-30\h-test\2024-09-30\trial01'; % buffer at 512 % Misalignment: ev_dt = 18.8094 msec
-folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-30\h-test\2024-09-30\trial02'; % buffer at 512 % Misalignment: ev_dt = 30.2944 msec
-folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-30\h-test\2024-09-30\trial03'; % buffer at 512 % Misalignment: ev_dt = 31.2556 msec
-% 2024-09-30 tests - Sound card buffer at 4096 or 8192
-folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-30\h-test-highBuffer\2024-09-30\trial01'; % buffer at 4096 % Misalignment: ev_dt = 12.1244 msec
-folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-30\h-test-highBuffer\2024-09-30\trial02'; % buffer at 4096 % Misalignment: ev_dt = 6.1000 msec
-folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-30\h-test-highBuffer\2024-09-30\trial03'; % buffer at 4096 % Misalignment: ev_dt = 10.6523 msec
-% 2024-09-30 tests - Sound card buffer back at 512
-folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-09-30\h-test-backLowBuffer\2024-09-30'; % buffer at 4096 % Misalignment: ev_dt = 26.6846 msec
-%
+% OceanAudio
 folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-10-18\test1'; % Misalignment: ev_dt = -2.1433 msec
 folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-10-18\test2'; % Misalignment: ev_dt = -2.2090 msec
 folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-10-18\test3'; % Misalignment: ev_dt = -2.1975 msec
+% Play_BatterySounds_20241022.mlapp
+folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-10-22\test1'; % Misalignment: ev_dt = -2.2010 msec
+folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-10-22\test2'; % Misalignment: ev_dt = -2.2137 msec
+folder_root = 'Y:\Users\ariadna\ephys\h-tester\2024-10-22\test3'; % Misalignment: ev_dt = -2.1237 msec
 
 
 
 %%
 
 fmt = '.wav';
+fmt = '.flac';
 
 ls_mic = dir([folder_root filesep '*' fmt]);
 
@@ -138,7 +109,7 @@ switch ttl_ephys_type
     
     case 'mic'
 
-        ttl_eph = y(:,5);
+        ttl_eph = y(:,6);
         
         figure;plot(ttl_eph)
         Fs = Fs_mic;
@@ -286,7 +257,7 @@ xlabel('Time (s, ephys clock)')
 trange_ephys = [0.05 0.1];
 % trange_ephys = [56.23 56.25];
 trange_ephys = [15.1 15.3];
-trange_ephys = [24.2 24.3];
+trange_ephys = [20.1 20.2];
 
 trange_ephys_samp = trange_ephys * Fs_ephys;
 trange_ephys_ptb  = trange_ephys + ttlEphysTimeStamps;
@@ -327,7 +298,7 @@ ev_samp   = 284232;
 ev_samp   = 378942;
 ev_samp   = 640766;
 ev_samp   = 1064094;
-ev_samp   = 607007;
+ev_samp   = 503144;
 
 ev_tephys = tvec_ephys(ev_samp);
 ev_tptb   = tvec_ephys_ptb(ev_samp);
@@ -378,7 +349,7 @@ ev_mic_samp = 4702094;
 ev_mic_samp = 5178640;
 ev_mic_samp = 6532205;
 ev_mic_samp = 10669890;
-ev_mic_samp = 6549749;
+ev_mic_samp = 6866719;
 
 ev_mic_tptb = T_all(ev_mic_samp);
 
